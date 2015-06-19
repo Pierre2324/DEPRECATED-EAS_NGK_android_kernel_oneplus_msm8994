@@ -49,28 +49,17 @@ void revert_fsids(const struct cred * old_cred)
 }
 
 static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
-<<<<<<< HEAD
 			 umode_t mode, bool want_excl)
-=======
-			 int mode, struct nameidata *nd)
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 {
 	int err = 0;
 	struct dentry *lower_dentry;
 	struct dentry *lower_parent_dentry = NULL;
-<<<<<<< HEAD
 	struct path lower_path;
-	const struct cred *saved_cred = NULL;
-
-	if(!check_caller_access_to_name(dir, dentry->d_name.name)) {
-=======
-	struct path lower_path, saved_path;
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 	const struct cred *saved_cred = NULL;
 
 	int has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 	if(!check_caller_access_to_name(dir, dentry->d_name.name, sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
@@ -85,43 +74,19 @@ static int sdcardfs_create(struct inode *dir, struct dentry *dentry,
 	lower_dentry = lower_path.dentry;
 	lower_parent_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
 	/* set last 16bytes of mode field to 0664 */
 	mode = (mode & S_IFMT) | 00664;
 	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, want_excl);
 	if (err)
 		goto out;
 
-	err = sdcardfs_interpose(dentry, dir->i_sb, &lower_path, SDCARDFS_I(dir)->userid);
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
-
-	pathcpy(&saved_path, &nd->path);
-	pathcpy(&nd->path, &lower_path);
-
-	/* set last 16bytes of mode field to 0664 */
-	mode = (mode & S_IFMT) | 00664;
-	err = vfs_create(lower_parent_dentry->d_inode, lower_dentry, mode, nd);
-
-	pathcpy(&nd->path, &saved_path);
-	if (err)
-		goto out;
-
 	err = sdcardfs_interpose(dentry, dir->i_sb, &lower_path);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	if (err)
 		goto out;
 	fsstack_copy_attr_times(dir, sdcardfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
 
 out:
-<<<<<<< HEAD
-=======
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_parent_dentry);
 	sdcardfs_put_lower_path(dentry, &lower_path);
 	REVERT_CRED(saved_cred);
@@ -149,13 +114,6 @@ static int sdcardfs_link(struct dentry *old_dentry, struct inode *dir,
 	lower_new_dentry = lower_new_path.dentry;
 	lower_dir_dentry = lock_parent(lower_new_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_new_path.mnt);
-	if (err)
-		goto out_unlock;
-
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	err = vfs_link(lower_old_dentry, lower_dir_dentry->d_inode,
 		       lower_new_dentry);
 	if (err || !lower_new_dentry->d_inode)
@@ -166,19 +124,10 @@ static int sdcardfs_link(struct dentry *old_dentry, struct inode *dir,
 		goto out;
 	fsstack_copy_attr_times(dir, lower_new_dentry->d_inode);
 	fsstack_copy_inode_size(dir, lower_new_dentry->d_inode);
-<<<<<<< HEAD
 	set_nlink(old_dentry->d_inode,
 		  sdcardfs_lower_inode(old_dentry->d_inode)->i_nlink);
 	i_size_write(new_dentry->d_inode, file_size_save);
 out:
-=======
-	old_dentry->d_inode->i_nlink =
-		  sdcardfs_lower_inode(old_dentry->d_inode)->i_nlink;
-	i_size_write(new_dentry->d_inode, file_size_save);
-out:
-	mnt_drop_write(lower_new_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_dir_dentry);
 	sdcardfs_put_lower_path(old_dentry, &lower_old_path);
 	sdcardfs_put_lower_path(new_dentry, &lower_new_path);
@@ -194,17 +143,11 @@ static int sdcardfs_unlink(struct inode *dir, struct dentry *dentry)
 	struct inode *lower_dir_inode = sdcardfs_lower_inode(dir);
 	struct dentry *lower_dir_dentry;
 	struct path lower_path;
-<<<<<<< HEAD
-	const struct cred *saved_cred = NULL;
-
-	if(!check_caller_access_to_name(dir, dentry->d_name.name)) {
-=======
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 	const struct cred *saved_cred = NULL;
 
 	int has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 	if(!check_caller_access_to_name(dir, dentry->d_name.name, sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
@@ -220,12 +163,6 @@ static int sdcardfs_unlink(struct inode *dir, struct dentry *dentry)
 	dget(lower_dentry);
 	lower_dir_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	err = vfs_unlink(lower_dir_inode, lower_dentry);
 
 	/*
@@ -241,21 +178,11 @@ static int sdcardfs_unlink(struct inode *dir, struct dentry *dentry)
 		goto out;
 	fsstack_copy_attr_times(dir, lower_dir_inode);
 	fsstack_copy_inode_size(dir, lower_dir_inode);
-<<<<<<< HEAD
 	set_nlink(dentry->d_inode,
 		  sdcardfs_lower_inode(dentry->d_inode)->i_nlink);
 	dentry->d_inode->i_ctime = dir->i_ctime;
 	d_drop(dentry); /* this is needed, else LTP fails (VFS won't do it) */
 out:
-=======
-	dentry->d_inode->i_nlink =
-		  sdcardfs_lower_inode(dentry->d_inode)->i_nlink;
-	dentry->d_inode->i_ctime = dir->i_ctime;
-	d_drop(dentry); /* this is needed, else LTP fails (VFS won't do it) */
-out:
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_dir_dentry);
 	dput(lower_dentry);
 	sdcardfs_put_lower_path(dentry, &lower_path);
@@ -279,12 +206,6 @@ static int sdcardfs_symlink(struct inode *dir, struct dentry *dentry,
 	lower_dentry = lower_path.dentry;
 	lower_parent_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	err = vfs_symlink(lower_parent_dentry->d_inode, lower_dentry, symname);
 	if (err)
 		goto out;
@@ -295,11 +216,6 @@ static int sdcardfs_symlink(struct inode *dir, struct dentry *dentry,
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
 
 out:
-<<<<<<< HEAD
-=======
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_parent_dentry);
 	sdcardfs_put_lower_path(dentry, &lower_path);
 	REVERT_CRED();
@@ -323,11 +239,7 @@ static int touch(char *abs_path, mode_t mode) {
 	return 0;
 }
 
-<<<<<<< HEAD
 static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
-=======
-static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 {
 	int err = 0;
 	int make_nomedia_in_obb = 0;
@@ -343,12 +255,8 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	int fullpath_namelen;
 	int touch_err = 0;
 
-<<<<<<< HEAD
-	if(!check_caller_access_to_name(dir, dentry->d_name.name)) {
-=======
 	int has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 	if(!check_caller_access_to_name(dir, dentry->d_name.name, sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
@@ -371,13 +279,6 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 	lower_dentry = lower_path.dentry;
 	lower_parent_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
-
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	/* set last 16bytes of mode field to 0775 */
 	mode = (mode & S_IFMT) | 00775;
 	err = vfs_mkdir(lower_parent_dentry->d_inode, lower_dentry, mode);
@@ -392,46 +293,28 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 		if(err) {
 			/* if the sbi->obbpath is not available, the lower_path won't be
 			 * changed by setup_obb_dentry() but the lower path is saved to
-<<<<<<< HEAD
-			 * its orig_path. this dentry will be revalidated later.
-=======
              * its orig_path. this dentry will be revalidated later.
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 			 * but now, the lower_path should be NULL */
 			sdcardfs_put_reset_lower_path(dentry);
 
 			/* the newly created lower path which saved to its orig_path or
 			 * the lower_path is the base obbpath.
-<<<<<<< HEAD
-			 * therefore, an additional path_get is required */
-=======
              * therefore, an additional path_get is required */
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 			path_get(&lower_path);
 		} else
 			make_nomedia_in_obb = 1;
 	}
 
-<<<<<<< HEAD
-	err = sdcardfs_interpose(dentry, dir->i_sb, &lower_path, pi->userid);
-=======
 	err = sdcardfs_interpose(dentry, dir->i_sb, &lower_path);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	if (err)
 		goto out;
 
 	fsstack_copy_attr_times(dir, sdcardfs_lower_inode(dir));
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
 	/* update number of links on parent directory */
-<<<<<<< HEAD
 	set_nlink(dir, sdcardfs_lower_inode(dir)->i_nlink);
 
-	if ((!sbi->options.multiuser) && (!strcasecmp(dentry->d_name.name, "obb"))
-=======
-	dir->i_nlink = sdcardfs_lower_inode(dir)->i_nlink;
-
 	if ((sbi->options.derive == DERIVE_UNIFIED) && (!strcasecmp(dentry->d_name.name, "obb"))
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		&& (pi->perm == PERM_ANDROID) && (pi->userid == 0))
 		make_nomedia_in_obb = 1;
 
@@ -474,11 +357,6 @@ static int sdcardfs_mkdir(struct inode *dir, struct dentry *dentry, int mode)
 		kfree(nomedia_fullpath);
 	}
 out:
-<<<<<<< HEAD
-=======
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_parent_dentry);
 	sdcardfs_put_lower_path(dentry, &lower_path);
 out_revert:
@@ -493,18 +371,12 @@ static int sdcardfs_rmdir(struct inode *dir, struct dentry *dentry)
 	struct dentry *lower_dir_dentry;
 	int err;
 	struct path lower_path;
-<<<<<<< HEAD
-	const struct cred *saved_cred = NULL;
-
-	if(!check_caller_access_to_name(dir, dentry->d_name.name)) {
-=======
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 	const struct cred *saved_cred = NULL;
 	//char *path_s = NULL;
 
 	int has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 	if(!check_caller_access_to_name(dir, dentry->d_name.name, sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
@@ -522,12 +394,6 @@ static int sdcardfs_rmdir(struct inode *dir, struct dentry *dentry)
 	lower_dentry = lower_path.dentry;
 	lower_dir_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	err = vfs_rmdir(lower_dir_dentry->d_inode, lower_dentry);
 	if (err)
 		goto out;
@@ -537,17 +403,9 @@ static int sdcardfs_rmdir(struct inode *dir, struct dentry *dentry)
 		clear_nlink(dentry->d_inode);
 	fsstack_copy_attr_times(dir, lower_dir_dentry->d_inode);
 	fsstack_copy_inode_size(dir, lower_dir_dentry->d_inode);
-<<<<<<< HEAD
 	set_nlink(dir, lower_dir_dentry->d_inode->i_nlink);
 
 out:
-=======
-	dir->i_nlink = lower_dir_dentry->d_inode->i_nlink;
-
-out:
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_dir_dentry);
 	sdcardfs_put_real_lower(dentry, &lower_path);
 	REVERT_CRED(saved_cred);
@@ -556,11 +414,7 @@ out_eacces:
 }
 
 #if 0
-<<<<<<< HEAD
 static int sdcardfs_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
-=======
-static int sdcardfs_mknod(struct inode *dir, struct dentry *dentry, int mode,
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 			dev_t dev)
 {
 	int err = 0;
@@ -574,12 +428,6 @@ static int sdcardfs_mknod(struct inode *dir, struct dentry *dentry, int mode,
 	lower_dentry = lower_path.dentry;
 	lower_parent_dentry = lock_parent(lower_dentry);
 
-<<<<<<< HEAD
-=======
-	err = mnt_want_write(lower_path.mnt);
-	if (err)
-		goto out_unlock;
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	err = vfs_mknod(lower_parent_dentry->d_inode, lower_dentry, mode, dev);
 	if (err)
 		goto out;
@@ -591,11 +439,6 @@ static int sdcardfs_mknod(struct inode *dir, struct dentry *dentry, int mode,
 	fsstack_copy_inode_size(dir, lower_parent_dentry->d_inode);
 
 out:
-<<<<<<< HEAD
-=======
-	mnt_drop_write(lower_path.mnt);
-out_unlock:
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unlock_dir(lower_parent_dentry);
 	sdcardfs_put_lower_path(dentry, &lower_path);
 	REVERT_CRED();
@@ -618,12 +461,6 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	struct dentry *trap = NULL;
 	struct dentry *new_parent = NULL;
 	struct path lower_old_path, lower_new_path;
-<<<<<<< HEAD
-	const struct cred *saved_cred = NULL;
-
-	if(!check_caller_access_to_name(old_dir, old_dentry->d_name.name) ||
-		!check_caller_access_to_name(new_dir, new_dentry->d_name.name)) {
-=======
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(old_dentry->d_sb);
 	const struct cred *saved_cred = NULL;
 
@@ -632,7 +469,6 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			sbi->options.derive, 1, has_rw) ||
 		!check_caller_access_to_name(new_dir, new_dentry->d_name.name,
 			sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  new_dentry: %s, task:%s\n",
 						 __func__, new_dentry->d_name.name, current->comm);
@@ -662,32 +498,10 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		goto out;
 	}
 
-<<<<<<< HEAD
 	err = vfs_rename(lower_old_dir_dentry->d_inode, lower_old_dentry,
 			 lower_new_dir_dentry->d_inode, lower_new_dentry);
 	if (err)
 		goto out;
-
-	/* Copy attrs from lower dir, but i_uid/i_gid */
-	sdcardfs_copy_and_fix_attrs(new_dir, lower_new_dir_dentry->d_inode);
-	fsstack_copy_inode_size(new_dir, lower_new_dir_dentry->d_inode);
-
-	if (new_dir != old_dir) {
-		sdcardfs_copy_and_fix_attrs(old_dir, lower_old_dir_dentry->d_inode);
-		fsstack_copy_inode_size(old_dir, lower_old_dir_dentry->d_inode);
-
-=======
-	err = mnt_want_write(lower_old_path.mnt);
-	if (err)
-		goto out;
-	err = mnt_want_write(lower_new_path.mnt);
-	if (err)
-		goto out_drop_old_write;
-
-	err = vfs_rename(lower_old_dir_dentry->d_inode, lower_old_dentry,
-			 lower_new_dir_dentry->d_inode, lower_new_dentry);
-	if (err)
-		goto out_err;
 
 	/* Copy attrs from lower dir, but i_uid/i_gid */
 	fsstack_copy_attr_all(new_dir, lower_new_dir_dentry->d_inode);
@@ -697,38 +511,19 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 		fsstack_copy_attr_all(old_dir, lower_old_dir_dentry->d_inode);
 		fsstack_copy_inode_size(old_dir, lower_old_dir_dentry->d_inode);
 		fix_derived_permission(old_dir);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		/* update the derived permission of the old_dentry
 		 * with its new parent
 		 */
 		new_parent = dget_parent(new_dentry);
 		if(new_parent) {
 			if(old_dentry->d_inode) {
-<<<<<<< HEAD
-				update_derived_permission_lock(old_dentry);
-=======
 				get_derived_permission(new_parent, old_dentry);
 				fix_derived_permission(old_dentry->d_inode);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 			}
 			dput(new_parent);
 		}
 	}
-<<<<<<< HEAD
-	/* At this point, not all dentry information has been moved, so
-	 * we pass along new_dentry for the name.*/
-	mutex_lock(&old_dentry->d_inode->i_mutex);
-	get_derived_permission_new(new_dentry->d_parent, old_dentry, new_dentry);
-	fix_derived_permission(old_dentry->d_inode);
-	get_derive_permissions_recursive(old_dentry);
-	mutex_unlock(&old_dentry->d_inode->i_mutex);
-=======
 
-out_err:
-	mnt_drop_write(lower_new_path.mnt);
-out_drop_old_write:
-	mnt_drop_write(lower_old_path.mnt);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 out:
 	unlock_rename(lower_old_dir_dentry, lower_new_dir_dentry);
 	dput(lower_old_dir_dentry);
@@ -810,29 +605,15 @@ static void sdcardfs_put_link(struct dentry *dentry, struct nameidata *nd,
 }
 #endif
 
-<<<<<<< HEAD
 static int sdcardfs_permission(struct inode *inode, int mask)
 {
 	int err;
 
-=======
-static int sdcardfs_permission(struct inode *inode, int mask, unsigned int flags)
-{
-	int err;
-
-	if (flags & IPERM_FLAG_RCU)
-		return -ECHILD;
-
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	/*
 	 * Permission check on sdcardfs inode.
 	 * Calling process should have AID_SDCARD_RW permission
 	 */
-<<<<<<< HEAD
 	err = generic_permission(inode, mask);
-=======
-	err = generic_permission(inode, mask, 0, inode->i_op->check_acl);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 	/* XXX
 	 * Original sdcardfs code calls inode_permission(lower_inode,.. )
@@ -870,17 +651,11 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	struct inode *lower_inode;
 	struct path lower_path;
 	struct dentry *parent;
-<<<<<<< HEAD
-
-	parent = dget_parent(dentry);
-	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
-=======
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 
 	parent = dget_parent(dentry);
 	if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 						sbi->options.derive, 0, 0)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 		printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 						 "  dentry: %s, task:%s\n",
 						 __func__, dentry->d_name.name, current->comm);
@@ -895,12 +670,6 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	lower_dentry = lower_path.dentry;
 	lower_inode = sdcardfs_lower_inode(inode);
 
-<<<<<<< HEAD
-
-	sdcardfs_copy_and_fix_attrs(inode, lower_inode);
-	fsstack_copy_inode_size(inode, lower_inode);
-
-=======
 	fsstack_copy_attr_all(inode, lower_inode);
 	fsstack_copy_inode_size(inode, lower_inode);
 	/* if the dentry has been moved from other location
@@ -908,7 +677,6 @@ static int sdcardfs_getattr(struct vfsmount *mnt, struct dentry *dentry,
 	 * rechecked from its private field.
 	 */
 	fix_derived_permission(inode);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 	generic_fillattr(inode, stat);
 	sdcardfs_put_lower_path(dentry, &lower_path);
@@ -923,13 +691,9 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	struct inode *lower_inode;
 	struct path lower_path;
 	struct iattr lower_ia;
-<<<<<<< HEAD
-	struct dentry *parent;
-=======
 	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(dentry->d_sb);
 	struct dentry *parent;
 	int has_rw;
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 	inode = dentry->d_inode;
 
@@ -943,15 +707,10 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	/* no vfs_XXX operations required, cred overriding will be skipped. wj*/
 	if (!err) {
 		/* check the Android group ID */
-<<<<<<< HEAD
-		parent = dget_parent(dentry);
-		if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name)) {
-=======
 		has_rw = get_caller_has_rw_locked(sbi->pkgl_id, sbi->options.derive);
 		parent = dget_parent(dentry);
 		if(!check_caller_access_to_name(parent->d_inode, dentry->d_name.name,
 						sbi->options.derive, 1, has_rw)) {
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 			printk(KERN_INFO "%s: need to check the caller's gid in packages.list\n"
 							 "  dentry: %s, task:%s\n",
 							 __func__, dentry->d_name.name, current->comm);
@@ -1015,15 +774,10 @@ static int sdcardfs_setattr(struct dentry *dentry, struct iattr *ia)
 	if (err)
 		goto out;
 
-<<<<<<< HEAD
-	/* get attributes from the lower inode and update derived permissions */
-	sdcardfs_copy_and_fix_attrs(inode, lower_inode);
-=======
 	/* get attributes from the lower inode */
 	fsstack_copy_attr_all(inode, lower_inode);
 	/* update derived permission of the upper inode */
 	fix_derived_permission(inode);
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 	/*
 	 * Not running fsstack_copy_inode_size(inode, lower_inode), because
@@ -1052,13 +806,9 @@ const struct inode_operations sdcardfs_symlink_iops = {
 const struct inode_operations sdcardfs_dir_iops = {
 	.create		= sdcardfs_create,
 	.lookup		= sdcardfs_lookup,
-<<<<<<< HEAD
 #if 0
 	.permission	= sdcardfs_permission,
 #endif
-=======
-	.permission	= sdcardfs_permission,
->>>>>>> a2bca0545f6... Initial port of sdcardfs
 	.unlink		= sdcardfs_unlink,
 	.mkdir		= sdcardfs_mkdir,
 	.rmdir		= sdcardfs_rmdir,
