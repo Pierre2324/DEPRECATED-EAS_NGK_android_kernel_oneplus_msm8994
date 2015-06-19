@@ -42,7 +42,10 @@
 #include <linux/types.h>
 #include <linux/security.h>
 #include <linux/string.h>
+<<<<<<< HEAD
 #include <linux/list.h>
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 #include "multiuser.h"
 
 /* the file system name */
@@ -71,11 +74,18 @@
 #define fix_derived_permission(x)	\
 	do {						\
 		(x)->i_uid = SDCARDFS_I(x)->d_uid;	\
+<<<<<<< HEAD
 		(x)->i_gid = get_gid(SDCARDFS_I(x));	\
 		(x)->i_mode = ((x)->i_mode & S_IFMT) | get_mode(SDCARDFS_I(x));\
 	} while (0)
 
 
+=======
+		(x)->i_gid = SDCARDFS_I(x)->d_gid;	\
+		(x)->i_mode = ((x)->i_mode & S_IFMT) | SDCARDFS_I(x)->d_mode;\
+	} while (0)
+
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 /* OVERRIDE_CRED() and REVERT_CRED()
  * 	OVERRID_CRED()
  * 		backup original task->cred
@@ -101,11 +111,16 @@
 		(int)current->cred->fsuid, 		\
 		(int)current->cred->fsgid);
 
+<<<<<<< HEAD
 /* Android 5.0 support */
+=======
+/* Android 4.4 support */
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 /* Permission mode for a specific node. Controls how file permissions
  * are derived for children nodes. */
 typedef enum {
+<<<<<<< HEAD
     /* Nothing special; this node should just inherit from its parent. */
     PERM_INHERIT,
     /* This node is one level above a normal root; used for legacy layouts
@@ -123,6 +138,37 @@ typedef enum {
     PERM_ANDROID_MEDIA,
 } perm_t;
 
+=======
+	/* Nothing special; this node should just inherit from its parent. */
+	PERM_INHERIT,
+	/* This node is one level above a normal root; used for legacy layouts
+	 * which use the first level to represent user_id. */
+	PERM_LEGACY_PRE_ROOT,
+	/* This node is "/" */
+	PERM_ROOT,
+	/* This node is "/Android" */
+	PERM_ANDROID,
+	/* This node is "/Android/data" */
+	PERM_ANDROID_DATA,
+	/* This node is "/Android/obb" */
+	PERM_ANDROID_OBB,
+	/* This node is "/Android/user" */
+	PERM_ANDROID_USER,
+} perm_t;
+
+/* Permissions structure to derive */
+typedef enum {
+	DERIVE_NONE,
+	DERIVE_LEGACY,
+	DERIVE_UNIFIED,
+} derive_t;
+
+typedef enum {
+	LOWER_FS_EXT4,
+	LOWER_FS_FAT,
+} lower_fs_t;
+
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 struct sdcardfs_sb_info;
 struct sdcardfs_mount_options;
 
@@ -149,11 +195,17 @@ extern void sdcardfs_destroy_dentry_cache(void);
 extern int new_dentry_private_data(struct dentry *dentry);
 extern void free_dentry_private_data(struct dentry *dentry);
 extern struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
+<<<<<<< HEAD
 				unsigned int flags);
 extern struct inode *sdcardfs_iget(struct super_block *sb,
 				 struct inode *lower_inode, userid_t id);
 extern int sdcardfs_interpose(struct dentry *dentry, struct super_block *sb,
 			    struct path *lower_path, userid_t id);
+=======
+				    struct nameidata *nd);
+extern int sdcardfs_interpose(struct dentry *dentry, struct super_block *sb,
+			    struct path *lower_path);
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 /* file private data */
 struct sdcardfs_file_info {
@@ -164,16 +216,30 @@ struct sdcardfs_file_info {
 /* sdcardfs inode data in memory */
 struct sdcardfs_inode_info {
 	struct inode *lower_inode;
+<<<<<<< HEAD
 	/* state derived based on current position in hierachy */
 	perm_t perm;
 	userid_t userid;
 	uid_t d_uid;
 	bool under_android;
+=======
+	/* state derived based on current position in hierachy
+	 * caution: d_mode does not include file types
+	 */
+	perm_t perm;
+	userid_t userid;
+	uid_t d_uid;
+	gid_t d_gid;
+	mode_t d_mode;
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 
 	struct inode vfs_inode;
 };
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 /* sdcardfs dentry data in memory */
 struct sdcardfs_dentry_info {
 	spinlock_t lock;	/* protects lower_path */
@@ -184,16 +250,26 @@ struct sdcardfs_dentry_info {
 struct sdcardfs_mount_options {
 	uid_t fs_low_uid;
 	gid_t fs_low_gid;
+<<<<<<< HEAD
 	userid_t fs_user_id;
 	gid_t gid;
 	mode_t mask;
 	bool multiuser;
+=======
+	gid_t write_gid;
+	int split_perms;
+	derive_t derive;
+	lower_fs_t lower_fs;
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	unsigned int reserved_mb;
 };
 
 /* sdcardfs super-block data in memory */
 struct sdcardfs_sb_info {
+<<<<<<< HEAD
 	struct super_block *sb;
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	struct super_block *lower_sb;
 	/* derived perm policy : some of options have been added
 	 * to sdcardfs_mount_options (Android 4.4 support) */
@@ -202,7 +278,10 @@ struct sdcardfs_sb_info {
 	char *obbpath_s;
 	struct path obbpath;
 	void *pkgl_id;
+<<<<<<< HEAD
 	struct list_head list;
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 };
 
 /*
@@ -321,6 +400,7 @@ static inline void sdcardfs_put_reset_##pname(const struct dentry *dent) \
 SDCARDFS_DENT_FUNC(lower_path)
 SDCARDFS_DENT_FUNC(orig_path)
 
+<<<<<<< HEAD
 static inline int get_gid(struct sdcardfs_inode_info *info) {
 	struct sdcardfs_sb_info *sb_info = SDCARDFS_SB(info->vfs_inode.i_sb);
 	if (sb_info->options.gid == AID_SDCARD_RW) {
@@ -359,6 +439,8 @@ static inline int get_mode(struct sdcardfs_inode_info *info) {
 	return filtered_mode;
 }
 
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 static inline int has_graft_path(const struct dentry *dent)
 {
 	int ret = 0;
@@ -392,6 +474,7 @@ static inline void sdcardfs_put_real_lower(const struct dentry *dent,
 		sdcardfs_put_lower_path(dent, real_lower);
 }
 
+<<<<<<< HEAD
 extern struct mutex sdcardfs_super_list_lock;
 extern struct list_head sdcardfs_super_list;
 
@@ -399,17 +482,33 @@ extern struct list_head sdcardfs_super_list;
 extern appid_t get_appid(void *pkgl_id, const char *app_name);
 extern int check_caller_access_to_name(struct inode *parent_node, const char* name);
 extern int open_flags_to_access_mode(int open_flags);
+=======
+/* for packagelist.c */
+extern int get_caller_has_rw_locked(void *pkgl_id, derive_t derive);
+extern appid_t get_appid(void *pkgl_id, const char *app_name);
+extern int check_caller_access_to_name(struct inode *parent_node, const char* name,
+                                        derive_t derive, int w_ok, int has_rw);
+extern int open_flags_to_access_mode(int open_flags);
+extern void * packagelist_create(gid_t write_gid);
+extern void packagelist_destroy(void *pkgl_id);
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 extern int packagelist_init(void);
 extern void packagelist_exit(void);
 
 /* for derived_perm.c */
 extern void setup_derived_state(struct inode *inode, perm_t perm,
+<<<<<<< HEAD
 			userid_t userid, uid_t uid, bool under_android);
 extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
 extern void get_derived_permission_new(struct dentry *parent, struct dentry *dentry, struct dentry *newdentry);
 extern void get_derive_permissions_recursive(struct dentry *parent);
 
 extern void update_derived_permission_lock(struct dentry *dentry);
+=======
+			userid_t userid, uid_t uid, gid_t gid, mode_t mode);
+extern void get_derived_permission(struct dentry *parent, struct dentry *dentry);
+extern void update_derived_permission(struct dentry *dentry);
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 extern int need_graft_path(struct dentry *dentry);
 extern int is_base_obbpath(struct dentry *dentry);
 extern int is_obbpath_invalid(struct dentry *dentry);
@@ -434,9 +533,22 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	int err;
 	struct dentry *dent;
 	struct iattr attrs;
+<<<<<<< HEAD
 	struct path parent;
 
 	dent = kern_path_locked(path_s, &parent);
+=======
+	struct nameidata nd;
+
+	err = kern_path_parent(path_s, &nd);
+	if (err) {
+		if (err == -EEXIST)
+			err = 0;
+		goto out;
+	}
+
+	dent = lookup_create(&nd, 1);
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	if (IS_ERR(dent)) {
 		err = PTR_ERR(dent);
 		if (err == -EEXIST)
@@ -444,7 +556,11 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 		goto out_unlock;
 	}
 
+<<<<<<< HEAD
 	err = vfs_mkdir(parent.dentry->d_inode, dent, mode);
+=======
+	err = vfs_mkdir(nd.path.dentry->d_inode, dent, mode);
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	if (err) {
 		if (err == -EEXIST)
 			err = 0;
@@ -463,8 +579,15 @@ out_dput:
 
 out_unlock:
 	/* parent dentry locked by lookup_create */
+<<<<<<< HEAD
 	mutex_unlock(&parent.dentry->d_inode->i_mutex);
 	path_put(&parent);
+=======
+	mutex_unlock(&nd.path.dentry->d_inode->i_mutex);
+	path_put(&nd.path);
+
+out:
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	return err;
 }
 
@@ -513,6 +636,7 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 		return 1;
 }
 
+<<<<<<< HEAD
 /* Copies attrs and maintains sdcardfs managed attrs */
 static inline void sdcardfs_copy_and_fix_attrs(struct inode *dest, const struct inode *src)
 {
@@ -527,4 +651,6 @@ static inline void sdcardfs_copy_and_fix_attrs(struct inode *dest, const struct 
 	dest->i_flags = src->i_flags;
 	set_nlink(dest, src->i_nlink);
 }
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 #endif	/* not _SDCARDFS_H_ */

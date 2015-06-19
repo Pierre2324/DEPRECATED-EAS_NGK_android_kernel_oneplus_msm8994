@@ -26,7 +26,11 @@
  *          0: tell VFS to invalidate dentry
  *          1: dentry is valid
  */
+<<<<<<< HEAD
 static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
+=======
+static int sdcardfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 {
 	int err = 1;
 	struct path parent_lower_path, lower_path;
@@ -35,7 +39,11 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	struct dentry *lower_cur_parent_dentry = NULL;
 	struct dentry *lower_dentry = NULL;
 
+<<<<<<< HEAD
 	if (flags & LOOKUP_RCU)
+=======
+	if (nd && nd->flags & LOOKUP_RCU)
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 		return -ECHILD;
 
 	spin_lock(&dentry->d_lock);
@@ -173,6 +181,7 @@ static int sdcardfs_cmp_ci(const struct dentry *parent,
 	return 1;
 }
 
+<<<<<<< HEAD
 static void sdcardfs_canonical_path(const struct path *path, struct path *actual_path) {
 	sdcardfs_get_real_lower(path->dentry, actual_path);
 }
@@ -184,10 +193,16 @@ static int sdcardfs_d_delete(const struct dentry * dentry)
 
 const struct dentry_operations sdcardfs_ci_dops = {
 	.d_delete	= sdcardfs_d_delete,
+=======
+const struct dentry_operations sdcardfs_ci_dops = {
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 	.d_revalidate	= sdcardfs_d_revalidate,
 	.d_release	= sdcardfs_d_release,
 	.d_hash 	= sdcardfs_hash_ci,
 	.d_compare	= sdcardfs_cmp_ci,
+<<<<<<< HEAD
 	.d_canonical_path = sdcardfs_canonical_path,
+=======
+>>>>>>> a2bca0545f6... Initial port of sdcardfs
 };
 
