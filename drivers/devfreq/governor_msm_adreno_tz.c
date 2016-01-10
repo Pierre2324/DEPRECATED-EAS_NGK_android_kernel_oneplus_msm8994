@@ -338,14 +338,12 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		stats.total_time >>= 7;
 	}
 	*freq = stats.current_frequency;
-
 #ifdef CONFIG_ADRENO_IDLER
 	if (adreno_idler(stats, devfreq, freq)) {
 		/* adreno_idler has asked to bail out now */
 		return 0;
 	}
 #endif
-
 	/*
 	 * Force to use & record as min freq when system has
 	 * entered pm-suspend or screen-off state.
@@ -354,7 +352,6 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		*freq = devfreq->profile->freq_table[devfreq->profile->max_state - 1];
 		return 0;
 	}
-
 	priv->bin.total_time += stats.total_time;
 #if 1
 	// scale busy time up based on adrenoboost parameter, only if MIN_BUSY exceeded...
@@ -366,7 +363,6 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 #else
 	priv->bin.busy_time += stats.busy_time;
 #endif
-
 	/* Update the GPU load statistics */
 	compute_work_load(&stats, priv, devfreq);
 	/*
@@ -403,16 +399,29 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		busy_bin = 0;
 		frame_flag = 0;
 	} else {
-
 		scm_data[0] = level;
 		scm_data[1] = priv->bin.total_time;
-		scm_data[2] = priv->bin.busy_time + (level * adrenoboost);
 		scm_data[2] = priv->bin.busy_time;
 		__secure_tz_update_entry3(scm_data, sizeof(scm_data),
 					&val, sizeof(val), priv->is_64);
 	}
+
+	// AP: Tweak 27 MHz frequency to be used a bit more
+	if ((val == 0) && (level == 5) &&	// (5 = 180 MHz step)
+		((priv->bin.busy_time * 100 / priv->bin.total_time) < 98))
+		val = 1;
+
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
+
+	// AP: Tweak not to peak up when we come from 27 MHz and need to ramp up
+	if ((val < -1) && (level == 6))
+		val = -1;
+
+	// AP: In general we do not ramp up more than 2 steps at once
+	if (val < -2)
+		val = -2;
+
 	/*
 	 * If the decision is to move to a different level, make sure the GPU
 	 * frequency changes.
