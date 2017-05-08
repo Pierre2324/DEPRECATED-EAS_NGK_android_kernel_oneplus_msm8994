@@ -516,6 +516,10 @@ CONFIG_FUSE_FS=y
 CONFIG_VFAT_FS=y
 CONFIG_NTFS_FS=y
 CONFIG_TMPFS=y
+<<<<<<< HEAD
+=======
+CONFIG_CONFIGFS_FS=y
+>>>>>>> 9c741b21a6d... oneplus2: enable sdcardfs and dependencies
 CONFIG_SDCARD_FS=y
 CONFIG_PSTORE=y
 CONFIG_PSTORE_CONSOLE=y
