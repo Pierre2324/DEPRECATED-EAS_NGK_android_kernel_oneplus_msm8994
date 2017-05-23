@@ -514,8 +514,14 @@ int kgsl_cache_range_op(struct kgsl_memdesc *memdesc, size_t offset,
 	 * otherwise use the user address
 	 */
 
-	void *addr = (memdesc->hostptr) ?
-		memdesc->hostptr : (void *) memdesc->useraddr;
+int kgsl_cache_range_op(struct kgsl_memdesc *memdesc, size_t offset,
+		size_t size, unsigned int op)
+{
+	void *addr = NULL;
+	struct sg_table *sgt = NULL;
+	struct scatterlist *sg = NULL;
+	unsigned int i = 0, pos = 0;
+	int ret = 0;
 
 	if (size == 0 || size > UINT_MAX)
 		return -EINVAL;
@@ -543,16 +549,49 @@ int kgsl_cache_range_op(struct kgsl_memdesc *memdesc, size_t offset,
 	 * are not aligned to the cacheline size correctly.
 	 */
 
-	switch (_fixup_cache_range_op(op)) {
-	case KGSL_CACHE_OP_FLUSH:
-		dmac_flush_range(addr, addr + size);
-		break;
-	case KGSL_CACHE_OP_CLEAN:
-		dmac_clean_range(addr, addr + size);
-		break;
-	case KGSL_CACHE_OP_INV:
-		dmac_inv_range(addr, addr + size);
-		break;
+	if (memdesc->sg) {
+		for_each_sg(memdesc->sg, sg, memdesc->sglen, i) {
+			uint64_t sg_offset, sg_left;
+			if (offset >= (pos + sg->length)) {
+				pos += sg->length;
+				continue;
+			}
+			sg_offset = offset > pos ? offset - pos : 0;
+			sg_left = (sg->length - sg_offset > size) ? size :
+				                sg->length - sg_offset;
+			ret = kgsl_do_cache_op(sg_page(sg), NULL, sg_offset,
+				                                sg_left, op);
+			size -= sg_left;
+	                if (size == 0)
+		                break;
+			pos += sg->length;
+		}
+	} else {
+		if (memdesc->pages == NULL)
+			return ret;
+
+		sgt = kgsl_alloc_sgt_from_pages(memdesc);
+		if (IS_ERR(sgt))
+			return PTR_ERR(sgt);
+
+		for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+			uint64_t sg_offset, sg_left;
+
+			if (offset >= (pos + sg->length)) {
+				pos += sg->length;
+				continue;
+			}
+			sg_offset = offset > pos ? offset - pos : 0;
+			sg_left = (sg->length - sg_offset > size) ? size :
+						sg->length - sg_offset;
+			ret = kgsl_do_cache_op(sg_page(sg), NULL, sg_offset,
+								sg_left, op);
+			size -= sg_left;
+			if (size == 0)
+				break;
+			pos += sg->length;
+		}
+		kgsl_free_sgt(sgt);
 	}
 
 	return 0;
