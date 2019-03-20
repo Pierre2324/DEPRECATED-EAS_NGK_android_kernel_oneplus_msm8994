@@ -4716,6 +4716,7 @@ long __sched io_schedule_timeout(long timeout)
 
 	return ret;
 }
+EXPORT_SYMBOL(io_schedule_timeout);
 
 /**
  * sys_sched_get_priority_max - return maximum RT priority.
